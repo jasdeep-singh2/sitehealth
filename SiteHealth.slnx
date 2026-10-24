@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/SiteHealth.Cli/SiteHealth.Cli.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/SiteHealth.Cli.Tests/SiteHealth.Cli.Tests.csproj" />
+  </Folder>
+</Solution>
