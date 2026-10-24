@@ -16,8 +16,10 @@ public sealed class PageFetcher(HttpClient httpClient)
     //  - Dispose the response (a `using var response = ...` does it).
     //
     // Tests that define "done": tests/SiteHealth.Cli.Tests/PageFetcherTests.cs
-    public Task<string> FetchHtmlAsync(Uri url, CancellationToken cancellationToken)
+    public async Task<string> FetchHtmlAsync(Uri url, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException("Step 1: fetch the page HTML.");
+        using var response = await httpClient.GetAsync(url, cancellationToken);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadAsStringAsync(cancellationToken);
     }
 }
