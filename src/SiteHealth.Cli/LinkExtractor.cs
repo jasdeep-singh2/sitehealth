@@ -18,6 +18,34 @@ public sealed class LinkExtractor
     // Tests that define "done": tests/SiteHealth.Cli.Tests/LinkExtractorTests.cs
     public IReadOnlyList<Uri> ExtractLinks(string html, Uri baseUri)
     {
-        throw new NotImplementedException("Step 2: extract links from the HTML.");
+        // 1. Turn the HTML text into a document we can search
+        var document = new AngleSharp.Html.Parser.HtmlParser().ParseDocument(html);
+
+        var links = new List<Uri>();
+        var seen = new HashSet<Uri>();   // remembers links we've already added
+
+        // 2. Go through every <a> tag that has an href
+        foreach (var anchor in document.QuerySelectorAll("a[href]"))
+        {
+            var href = anchor.GetAttribute("href");
+
+            // Rule 3: skip empty links and links that start with "#"
+            if (string.IsNullOrWhiteSpace(href) || href.StartsWith("#"))
+                continue;
+
+            // Rule 1: combine the page address with the link, e.g. "/about" → full address
+            if (!Uri.TryCreate(baseUri, href, out var absolute))
+                continue;
+
+            // Rule 2: keep only http and https
+            if (absolute.Scheme != Uri.UriSchemeHttp && absolute.Scheme != Uri.UriSchemeHttps)
+                continue;
+
+            // Rule 4: seen.Add returns false if the link is already there
+            if (seen.Add(absolute))
+                links.Add(absolute);
+        }
+
+        return links;
     }
 }
