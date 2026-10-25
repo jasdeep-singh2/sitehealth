@@ -12,6 +12,7 @@ builder.Services.AddScanRateLimits(builder.Configuration);
 builder.Services.AddProxySupport(builder.Configuration);
 builder.Services.AddDashboardCors(builder.Configuration);
 builder.Services.AddHealthEndpoints();
+builder.Services.AddTelemetry(builder.Configuration);
 
 // Errors come back as ProblemDetails (RFC 9457): one standard JSON shape for every error
 builder.Services.AddProblemDetails();
