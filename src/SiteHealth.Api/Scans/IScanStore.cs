@@ -1,9 +1,7 @@
 namespace SiteHealth.Api.Scans;
 
 /// <summary>
-/// Saves and loads scans. The methods are async even though today's store is in memory,
-/// because the next implementation (EF Core + SQL) will talk to a database.
-/// Designing the interface for the real thing now means nothing else changes when we swap it.
+/// Saves and loads scans. The app uses <see cref="Data.EfScanStore"/> (EF Core + SQL Server).
 /// </summary>
 public interface IScanStore
 {
@@ -12,4 +10,10 @@ public interface IScanStore
     Task<Scan?> GetAsync(Guid id, CancellationToken cancellationToken);
 
     Task UpdateAsync(Scan scan, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Scans that were Queued or Running, oldest first. After a restart these were interrupted:
+    /// the in-memory queue is gone, so the worker picks them up from here instead.
+    /// </summary>
+    Task<IReadOnlyList<Guid>> GetUnfinishedIdsAsync(CancellationToken cancellationToken);
 }

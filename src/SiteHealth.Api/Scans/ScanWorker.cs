@@ -15,7 +15,16 @@ public sealed class ScanWorker(
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        // Waits quietly for the next scan; ends when the app shuts down (stoppingToken fires)
+        // Scans are saved in the database, but the queue lives in memory. After a restart, scans that
+        // were Queued or Running are in the database with nothing in the queue, so finish them first.
+        var unfinished = await store.GetUnfinishedIdsAsync(stoppingToken);
+        if (unfinished.Count > 0)
+            logger.LogInformation("Resuming {Count} scans interrupted by a restart", unfinished.Count);
+
+        foreach (var scanId in unfinished)
+            await ProcessAsync(scanId, stoppingToken);
+
+        // Then wait quietly for new scans; this ends when the app shuts down (stoppingToken fires)
         await foreach (var scanId in queue.DequeueAllAsync(stoppingToken))
             await ProcessAsync(scanId, stoppingToken);
     }

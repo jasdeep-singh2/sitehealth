@@ -124,6 +124,28 @@ public class ScanEndpointsTests
     }
 
     [Fact]
+    public async Task Worker_finishes_scans_that_were_interrupted_by_a_restart()
+    {
+        // As if the app stopped while one scan was waiting and another was halfway through
+        var createdAt = DateTimeOffset.UtcNow.AddMinutes(-5);
+        Scan[] interrupted =
+        [
+            new(Guid.CreateVersion7(), new Uri("https://example.com/"), ScanStatus.Queued, createdAt),
+            new(Guid.CreateVersion7(), new Uri("https://example.com/"), ScanStatus.Running, createdAt),
+        ];
+
+        await using var factory = new SiteHealthApiFactory(FakeWebsite, existingScans: interrupted);
+        var client = factory.CreateClient();
+
+        foreach (var scan in interrupted)
+        {
+            var finished = await WaitForScanAsync(client, new Uri($"/scans/{scan.Id}", UriKind.Relative));
+            Assert.Equal(ScanStatus.Completed, finished.Status);
+            Assert.Equal(2, finished.Result!.BrokenCount);
+        }
+    }
+
+    [Fact]
     public async Task Post_returns_503_when_the_queue_is_full()
     {
         await using var factory = new SiteHealthApiFactory(FakeWebsite, services =>
