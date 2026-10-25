@@ -70,7 +70,7 @@ public sealed class LinkChecker(HttpClient httpClient, IOptions<CrawlerOptions> 
         {
             // Rule 4: the site is down or unreachable. Record it, don't crash.
             // No response means no status code
-            return new LinkCheckResult(url, null, ex.Message);           // Blank 4: what goes here?
+            return new LinkCheckResult(url, null, ConnectionErrors.Describe(ex));
         }
         catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
