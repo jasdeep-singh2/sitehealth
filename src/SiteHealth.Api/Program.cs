@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using Scalar.AspNetCore;
+using SiteHealth.Api.Hosting;
 using SiteHealth.Api.Scans;
 using SiteHealth.Core;
 
@@ -8,6 +9,10 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddSiteHealthCore(builder.Configuration);
 builder.Services.AddScans(builder.Configuration);
 builder.Services.AddScanRateLimits(builder.Configuration);
+builder.Services.AddProxySupport(builder.Configuration);
+builder.Services.AddDashboardCors(builder.Configuration);
+builder.Services.AddHealthEndpoints();
+builder.Services.AddTelemetry(builder.Configuration);
 
 // Errors come back as ProblemDetails (RFC 9457): one standard JSON shape for every error
 builder.Services.AddProblemDetails();
@@ -34,11 +39,15 @@ builder.Services.AddOpenApi(options => options.AddDocumentTransformer((document,
 
 var app = builder.Build();
 
+// First, so every later step (rate limiting, logging) sees the caller's real IP address
+app.UseProxySupport();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
+app.UseDashboardCors();
 app.UseRateLimiter();
 
 app.MapScanEndpoints();
+app.MapHealthEndpoints();
 
 // On your own machine: the document at /openapi/v1.json, and Scalar at /scalar, a page for reading the
 // API and trying requests in the browser. Not mapped in production yet; the build writes the document

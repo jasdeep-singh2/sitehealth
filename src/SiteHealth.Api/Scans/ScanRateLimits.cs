@@ -24,8 +24,8 @@ public sealed class RateLimitOptions
 /// <remarks>
 /// Limits are per IP address. Two things to know for later:
 /// <list type="bullet">
-/// <item>Behind Azure's front end every request seems to come from Azure's own address. The deploy step must
-/// turn on forwarded headers (X-Forwarded-For) so RemoteIpAddress is the real caller again.</item>
+/// <item>Behind Azure's front end every request seems to come from Azure's own address. Setting
+/// Proxy:TrustForwardedHeaders makes RemoteIpAddress the real caller again (see Hosting.ProxySupport).</item>
 /// <item>The counters live in each app instance's memory, so with 3 instances a caller gets 3 times the limit.
 /// Once there's sign-in, we'll limit per user instead.</item>
 /// </list>
