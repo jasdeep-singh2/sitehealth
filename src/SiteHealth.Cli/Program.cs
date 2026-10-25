@@ -49,9 +49,15 @@ var extractor = host.Services.GetRequiredService<LinkExtractor>();
 var checker = host.Services.GetRequiredService<LinkChecker>();
 
 Console.WriteLine($"Fetching {startUrl} ...");
-var html = await fetcher.FetchHtmlAsync(startUrl, cts.Token);
+var page = await fetcher.FetchAsync(startUrl, cts.Token);
+if (!page.IsSuccess)
+{
+    // Exit code 3 means "couldn't check the site", which is different from 2, "found broken links".
+    Console.WriteLine($"Couldn't fetch {startUrl}: {page.Error}");
+    return 3;
+}
 
-var links = extractor.ExtractLinks(html, startUrl);
+var links = extractor.ExtractLinks(page.Html, startUrl);
 Console.WriteLine($"Found {links.Count} links. Checking them...");
 
 var results = await checker.CheckAsync(links, cts.Token);
