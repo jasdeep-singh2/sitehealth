@@ -10,6 +10,7 @@ builder.Services.AddSiteHealthCore(builder.Configuration);
 builder.Services.AddScans(builder.Configuration);
 builder.Services.AddScanRateLimits(builder.Configuration);
 builder.Services.AddProxySupport(builder.Configuration);
+builder.Services.AddDashboardCors(builder.Configuration);
 
 // Errors come back as ProblemDetails (RFC 9457): one standard JSON shape for every error
 builder.Services.AddProblemDetails();
@@ -40,6 +41,7 @@ var app = builder.Build();
 app.UseProxySupport();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
+app.UseDashboardCors();
 app.UseRateLimiter();
 
 app.MapScanEndpoints();
