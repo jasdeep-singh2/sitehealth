@@ -1,4 +1,7 @@
 using System.Text.Json.Serialization;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using SiteHealth.Api.Data;
 using SiteHealth.Api.Scans;
 using SiteHealth.Core;
 
@@ -16,12 +19,19 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 
 var app = builder.Build();
 
+// On your own machine, create or update the database automatically (see DatabaseOptions)
+if (app.Services.GetRequiredService<IOptions<DatabaseOptions>>().Value.MigrateOnStartup)
+{
+    await using var db = await app.Services.GetRequiredService<IDbContextFactory<SiteHealthDbContext>>().CreateDbContextAsync();
+    await db.Database.MigrateAsync();
+}
+
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 
 app.MapScanEndpoints();
 
-app.Run();
+await app.RunAsync();
 
 // Lets the integration tests start this app in memory with WebApplicationFactory<Program>
 public partial class Program;

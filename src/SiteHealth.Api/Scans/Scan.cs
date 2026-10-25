@@ -16,7 +16,10 @@ public enum ScanStatus
 /// It's an immutable record: the worker makes a changed copy with <c>with</c> and saves that,
 /// so a half-updated scan can never be seen by the API.
 /// </summary>
-/// <param name="Id">A version 7 GUID: unique, and sorted by creation time (handy for database indexes later).</param>
+/// <param name="Id">
+/// A version 7 GUID: unique, and its text sorts by creation time. (SQL Server compares GUIDs by their
+/// last bytes first, so this doesn't make SQL Server's index sequential; that only matters at large scale.)
+/// </param>
 /// <param name="Error">Why the scan failed. Only set when <paramref name="Status"/> is Failed.</param>
 /// <param name="Report">What the scan found. Only set when <paramref name="Status"/> is Completed.</param>
 public sealed record Scan(

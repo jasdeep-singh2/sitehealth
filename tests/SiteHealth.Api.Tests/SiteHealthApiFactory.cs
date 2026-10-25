@@ -1,35 +1,85 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using SiteHealth.Api.Data;
+using SiteHealth.Api.Scans;
 using SiteHealth.Core;
 
 namespace SiteHealth.Api.Tests;
 
 /// <summary>
-/// Starts the real API in memory, with the real queue, store and worker, but swaps out the two
-/// things that would reach the outside world: HTTP requests to websites, and Claude.
+/// Starts the real API in memory, with the real queue, worker and EF Core store, but swaps out the
+/// things that would reach the outside world: HTTP requests to websites, Claude, and SQL Server.
 /// So the tests are fast, free and give the same result every time.
 /// </summary>
-public sealed class SiteHealthApiFactory(
-    Func<HttpRequestMessage, HttpResponseMessage> respond,
-    Action<IServiceCollection>? configureServices = null) : WebApplicationFactory<Program>
+/// <remarks>
+/// The database is SQLite: a real SQL database in a temporary file, deleted afterwards, so every test
+/// starts with an empty one. A file rather than ":memory:", because an in-memory SQLite database
+/// lives on a single connection, and the API and the worker would use that connection at the same
+/// time, which SQLite doesn't allow. With a file, each DbContext gets its own connection, as in production.
+/// </remarks>
+public sealed class SiteHealthApiFactory : WebApplicationFactory<Program>
 {
+    private readonly Func<HttpRequestMessage, HttpResponseMessage> _respond;
+    private readonly Action<IServiceCollection>? _configureServices;
+    private readonly string _databasePath = Path.Combine(Path.GetTempPath(), $"sitehealth-test-{Guid.NewGuid():N}.db");
+    private readonly string _connectionString;
+
+    /// <param name="existingScans">Scans to put in the database before the app (and its worker) starts.</param>
+    public SiteHealthApiFactory(
+        Func<HttpRequestMessage, HttpResponseMessage> respond,
+        Action<IServiceCollection>? configureServices = null,
+        IEnumerable<Scan>? existingScans = null)
+    {
+        _respond = respond;
+        _configureServices = configureServices;
+        _connectionString = new SqliteConnectionStringBuilder { DataSource = _databasePath }.ToString();
+
+        // Create the tables now, before the worker starts and asks for unfinished scans.
+        // EnsureCreated builds the schema straight from the model; the migrations are written for SQL Server.
+        using var db = new SiteHealthDbContext(new DbContextOptionsBuilder<SiteHealthDbContext>().UseSqlite(_connectionString).Options);
+        db.Database.EnsureCreated();
+        db.Scans.AddRange(existingScans ?? []);
+        db.SaveChanges();
+    }
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        // Not "Development", so appsettings.Development.json (which runs SQL Server migrations) isn't loaded
+        builder.UseEnvironment("Testing");
+
         builder.ConfigureTestServices(services =>
         {
             // Point both typed HttpClients at a fake handler instead of the network
-            services.AddHttpClient<PageFetcher>().ConfigurePrimaryHttpMessageHandler(() => new StubHttpMessageHandler(respond));
-            services.AddHttpClient<LinkChecker>().ConfigurePrimaryHttpMessageHandler(() => new StubHttpMessageHandler(respond));
+            services.AddHttpClient<PageFetcher>().ConfigurePrimaryHttpMessageHandler(() => new StubHttpMessageHandler(_respond));
+            services.AddHttpClient<LinkChecker>().ConfigurePrimaryHttpMessageHandler(() => new StubHttpMessageHandler(_respond));
 
             // Replace Claude (registered when ANTHROPIC_API_KEY is set on this machine) with a fake
             services.RemoveAll<ILinkAdvisor>();
             services.AddSingleton<ILinkAdvisor, FakeLinkAdvisor>();
 
-            configureServices?.Invoke(services);
+            // Replace SQL Server with the in-memory SQLite database. Both registrations must go,
+            // otherwise EF Core sees two database providers configured and refuses to start.
+            services.RemoveAll<DbContextOptions<SiteHealthDbContext>>();
+            services.RemoveAll<IDbContextOptionsConfiguration<SiteHealthDbContext>>();
+            services.AddDbContextFactory<SiteHealthDbContext>(options => options.UseSqlite(_connectionString));
+
+            _configureServices?.Invoke(services);
         });
+    }
+
+    public override async ValueTask DisposeAsync()
+    {
+        await base.DisposeAsync();
+
+        // Pooled connections keep the file open; close them so the file can be deleted
+        SqliteConnection.ClearAllPools();
+        File.Delete(_databasePath);
     }
 
     private sealed class FakeLinkAdvisor : ILinkAdvisor
