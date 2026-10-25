@@ -1,6 +1,6 @@
-using SiteHealth.Cli.Prompts;
+using SiteHealth.Core.Prompts;
 
-namespace SiteHealth.Cli.Tests;
+namespace SiteHealth.Core.Tests;
 
 public class BrokenLinkPromptTests
 {

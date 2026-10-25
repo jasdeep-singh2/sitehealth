@@ -2,7 +2,7 @@ using Microsoft.Extensions.Options;
 using System.Collections.Concurrent;
 using System.Net;
 
-namespace SiteHealth.Cli;
+namespace SiteHealth.Core;
 
 /// <summary>
 /// Checks whether each link responds, in parallel but with a concurrency limit.
@@ -27,7 +27,7 @@ public sealed class LinkChecker(HttpClient httpClient, IOptions<CrawlerOptions> 
     // Why this matters for system design: limiting concurrency is "back-pressure". It protects the
     // site we're checking and our own machine. Later, Service Bus and scaled-out workers do the same job.
     //
-    // Tests that define "done": tests/SiteHealth.Cli.Tests/LinkCheckerTests.cs
+    // Tests that define "done": tests/SiteHealth.Core.Tests/LinkCheckerTests.cs
     public async Task<IReadOnlyList<LinkCheckResult>> CheckAsync(IEnumerable<Uri> links, CancellationToken cancellationToken)
     {
         // A thread-safe bag: 5 workers can add results at the same time without clashing

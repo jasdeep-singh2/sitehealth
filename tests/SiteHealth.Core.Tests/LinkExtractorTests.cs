@@ -1,4 +1,4 @@
-namespace SiteHealth.Cli.Tests;
+namespace SiteHealth.Core.Tests;
 
 // Step 2: these tests fail until you implement LinkExtractor.ExtractLinks.
 public class LinkExtractorTests

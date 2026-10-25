@@ -1,4 +1,4 @@
-namespace SiteHealth.Cli;
+namespace SiteHealth.Core;
 
 /// <summary>
 /// Settings for how politely we crawl. Bound from the "Crawler" section of appsettings.json

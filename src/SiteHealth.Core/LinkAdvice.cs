@@ -1,4 +1,4 @@
-namespace SiteHealth.Cli;
+namespace SiteHealth.Core;
 
 /// <summary>
 /// Claude's explanation for one group of broken links (see <see cref="LinkGroup"/>): why they're

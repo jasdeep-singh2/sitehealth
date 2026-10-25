@@ -1,4 +1,4 @@
-namespace SiteHealth.Cli;
+namespace SiteHealth.Core;
 
 /// <summary>
 /// Finds every link on a page and turns it into an absolute http(s) URL.
@@ -15,7 +15,7 @@ public sealed class LinkExtractor
     //  - Skip links that only point to a fragment on the same page (href="#top").
     //  - Remove duplicates, keeping the order they appear in.
     //
-    // Tests that define "done": tests/SiteHealth.Cli.Tests/LinkExtractorTests.cs
+    // Tests that define "done": tests/SiteHealth.Core.Tests/LinkExtractorTests.cs
     public IReadOnlyList<Uri> ExtractLinks(string html, Uri baseUri)
     {
         // 1. Turn the HTML text into a document we can search

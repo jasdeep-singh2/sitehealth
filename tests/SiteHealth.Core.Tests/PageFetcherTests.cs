@@ -1,6 +1,6 @@
 using System.Net;
 
-namespace SiteHealth.Cli.Tests;
+namespace SiteHealth.Core.Tests;
 
 // These tests fail until you implement PageFetcher.FetchAsync.
 public class PageFetcherTests

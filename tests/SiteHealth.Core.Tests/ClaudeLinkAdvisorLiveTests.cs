@@ -1,7 +1,7 @@
 using Anthropic;
 using Microsoft.Extensions.Options;
 
-namespace SiteHealth.Cli.Tests;
+namespace SiteHealth.Core.Tests;
 
 // Calls the REAL Claude API, so it costs a few cents and needs ANTHROPIC_API_KEY.
 // Skipped unless you opt in by setting SITEHEALTH_LIVE_AI_TESTS=1 in your environment.

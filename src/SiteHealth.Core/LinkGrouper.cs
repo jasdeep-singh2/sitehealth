@@ -1,4 +1,4 @@
-namespace SiteHealth.Cli;
+namespace SiteHealth.Core;
 
 /// <summary>
 /// Sorts broken links into groups that share the same problem.
@@ -7,7 +7,7 @@ namespace SiteHealth.Cli;
 /// </summary>
 public static class LinkGrouper
 {
-    // Tests that define "done": tests/SiteHealth.Cli.Tests/LinkGrouperTests.cs
+    // Tests that define "done": tests/SiteHealth.Core.Tests/LinkGrouperTests.cs
     public static IReadOnlyList<LinkGroup> Group(Uri pageUrl, IEnumerable<LinkCheckResult> brokenLinks)
     {
         return brokenLinks

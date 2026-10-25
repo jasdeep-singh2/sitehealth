@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace SiteHealth.Cli;
+namespace SiteHealth.Core;
 
 /// <summary>
 /// Turns Claude's JSON reply into <see cref="LinkAdvice"/> records, and checks it before we trust it.
@@ -16,7 +16,7 @@ public static class LinkAdviceParser
     // STEP 4b: you write this.
     //
     // Goal: read Claude's JSON and keep only advice we can trust.
-    // Tests: tests/SiteHealth.Cli.Tests/LinkAdviceParserTests.cs
+    // Tests: tests/SiteHealth.Core.Tests/LinkAdviceParserTests.cs
     public static IReadOnlyList<LinkAdvice> Parse(string json, IReadOnlyCollection<int> askedAbout)
     {
         var reply = JsonSerializer.Deserialize<AdviceReply>(json, JsonOptions);
