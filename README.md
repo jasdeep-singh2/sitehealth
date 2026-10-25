@@ -4,7 +4,7 @@ AI-powered website health monitor: .NET, React, Azure and Claude. Built in publi
 
 SiteHealth crawls a website, finds broken links, SEO problems, slow pages and accessibility issues, and uses Claude to explain each problem and suggest a fix. Results show up in a dashboard and, later, directly inside the Optimizely CMS editor.
 
-> **Status:** Day 1, project setup. Follow along in the [Learning log](#learning-log).
+> **Status:** Day 1 done: a working CLI link checker. Follow along in the [Learning log](#learning-log) and on my [blog](https://jasdeep.hashnode.dev).
 
 ## Why I'm building this
 
@@ -34,7 +34,7 @@ Every Optimizely site needs to stay healthy, so this project is useful to me, to
 ## Roadmap
 
 ### Phase 1: Foundations and MVP
-- [ ] CLI link checker (fetch a page, extract links, check status codes)
+- [x] CLI link checker (fetch a page, extract links, check status codes)
 - [ ] Claude explains broken links and suggests fixes (structured JSON)
 - [ ] ASP.NET Core API + background worker
 - [ ] React dashboard
@@ -71,9 +71,9 @@ _Coming soon, once the first runnable code lands._
 
 | Day | What I did | What I learned | Next |
 |---|---|---|---|
-| 1 | Set up tools, API key and this repo | | Build the CLI link checker |
+| 1 | Set up tools, API key and this repo. Built the CLI link checker with 15 tests ([blog post](https://jasdeep.hashnode.dev/building-an-ai-powered-website-health-checker-in-net)) | `IHttpClientFactory` and testable HTTP code, polite parallel requests (back-pressure), telling a timeout apart from Ctrl+C | Send broken links to Claude for explanations and fixes |
 
 ## Follow along
 
+- Blog: [jasdeep.hashnode.dev](https://jasdeep.hashnode.dev)
 - LinkedIn: _add your link_
-- Blog: _add your link_

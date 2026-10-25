@@ -3,6 +3,9 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/main/VisualStudio.gitignore
 
+# Unpublished blog drafts (published posts live on jasdeep.hashnode.dev)
+blog/drafts/
+
 # User-specific files
 *.rsuser
 *.suo
