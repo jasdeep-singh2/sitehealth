@@ -17,7 +17,11 @@ public static class ScanServiceCollectionExtensions
 
         // A factory rather than AddDbContext: the store is a singleton, so it creates a short-lived
         // DbContext for each operation instead of holding one.
-        services.AddDbContextFactory<SiteHealthDbContext>(options => options.UseSqlServer(connectionString));
+        // EnableRetryOnFailure retries SQL Server's known temporary errors (a dropped connection, a failover,
+        // a paused serverless database waking up) with growing delays, instead of failing the request.
+        services.AddDbContextFactory<SiteHealthDbContext>(options => options.UseSqlServer(
+            connectionString,
+            sql => sql.EnableRetryOnFailure(maxRetryCount: 6, maxRetryDelay: TimeSpan.FromSeconds(30), errorNumbersToAdd: null)));
 
         // Singletons: there is one queue and one store for the whole app, shared by the API and the worker
         services.AddSingleton<IScanQueue, ChannelScanQueue>();
