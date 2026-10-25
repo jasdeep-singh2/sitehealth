@@ -10,8 +10,8 @@ This is a **learning project built in public**. The owner is a .NET/Optimizely d
 
 ## How to work with me
 
-- **Teach while you build.** When you introduce a new concept or pattern, explain the why in a sentence or two.
-- **Don't do everything for me.** When I mark something as "I'll write this", review my code instead of rewriting it.
+- **Write the code for me.** Write the full implementation yourself. No fill-in-the-blank exercises or "you write this" TODOs.
+- **Then explain what you did and why.** After each change, walk me through the key decisions in plain language, and explain any new concept or pattern you used.
 - **Plan first** for anything bigger than a small fix: propose the approach and trade-offs before writing code.
 - Keep changes small and focused, one concern per commit.
 
