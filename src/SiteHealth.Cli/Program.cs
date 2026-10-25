@@ -61,34 +61,39 @@ var links = extractor.ExtractLinks(page.Html, startUrl);
 Console.WriteLine($"Found {links.Count} links. Checking them...");
 
 var results = await checker.CheckAsync(links, cts.Token);
-var broken = results.Where(r => r.IsBroken).OrderBy(r => r.Url.ToString()).ToList();
+var broken = results.Where(r => r.IsBroken).ToList();
+var groups = LinkGrouper.Group(startUrl, broken);
 
-var adviceByUrl = await GetAdviceAsync(host.Services, startUrl, broken, cts.Token);
+var adviceByGroup = await GetAdviceAsync(host.Services, startUrl, groups, cts.Token);
 
 Console.WriteLine();
-Console.WriteLine($"{broken.Count} broken out of {results.Count} links.");
-foreach (var result in broken)
+Console.WriteLine($"{broken.Count} broken out of {results.Count} links, in {groups.Count} groups.");
+foreach (var group in groups)
 {
-    var status = result.StatusCode?.ToString() ?? "ERR";
+    var site = group.IsSameSite ? "same site" : "other site";
+    var count = group.Links.Count == 1 ? "1 link" : $"{group.Links.Count} links";
     Console.WriteLine();
-    Console.WriteLine($"  {status,-5} {result.Url}{(result.Error is null ? "" : $"  ({result.Error})")}");
+    Console.WriteLine($"  {group.Problem} · {site} · {count}");
 
-    if (adviceByUrl.TryGetValue(result.Url, out var advice))
+    if (adviceByGroup.TryGetValue(group.Id, out var advice))
     {
         Console.WriteLine($"        Severity: {advice.Severity.ToUpperInvariant()}");
         Console.WriteLine($"        Cause:    {advice.Cause}");
         Console.WriteLine($"        Fix:      {advice.Fix}");
     }
+
+    foreach (var link in group.Links)
+        Console.WriteLine($"        - {link.Url}{(link.Error is null ? "" : $"  ({link.Error})")}");
 }
 
 return broken.Count == 0 ? 0 : 2;
 
-// Asks Claude about the broken links. AI advice is a bonus: if it isn't configured or fails,
+// Asks Claude about the groups of broken links. AI advice is a bonus: if it isn't configured or fails,
 // we say so and still show the link results.
-static async Task<Dictionary<Uri, LinkAdvice>> GetAdviceAsync(
-    IServiceProvider services, Uri pageUrl, IReadOnlyList<LinkCheckResult> broken, CancellationToken cancellationToken)
+static async Task<Dictionary<int, LinkAdvice>> GetAdviceAsync(
+    IServiceProvider services, Uri pageUrl, IReadOnlyList<LinkGroup> groups, CancellationToken cancellationToken)
 {
-    if (broken.Count == 0)
+    if (groups.Count == 0)
         return [];
 
     var advisor = services.GetService<ILinkAdvisor>();
@@ -98,11 +103,11 @@ static async Task<Dictionary<Uri, LinkAdvice>> GetAdviceAsync(
         return [];
     }
 
-    Console.WriteLine($"Asking Claude about {broken.Count} broken links...");
+    Console.WriteLine($"Asking Claude about {groups.Count} groups of broken links...");
     try
     {
-        var advice = await advisor.AdviseAsync(pageUrl, broken, cancellationToken);
-        return advice.ToDictionary(a => a.Url);
+        var advice = await advisor.AdviseAsync(pageUrl, groups, cancellationToken);
+        return advice.ToDictionary(a => a.GroupId);
     }
     catch (Exception ex) when (ex is not OperationCanceledException)
     {

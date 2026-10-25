@@ -20,13 +20,13 @@ public sealed class ClaudeLinkAdvisor(AnthropicClient client, IOptions<AiOptions
 
     public async Task<IReadOnlyList<LinkAdvice>> AdviseAsync(
         Uri pageUrl,
-        IReadOnlyList<LinkCheckResult> brokenLinks,
+        IReadOnlyList<LinkGroup> groups,
         CancellationToken cancellationToken)
     {
         var advice = new List<LinkAdvice>();
 
-        // Send the links in batches, so a page with hundreds of broken links doesn't make one giant request
-        foreach (var batch in brokenLinks.Chunk(_options.MaxLinksPerRequest))
+        // Send the groups in batches, so a page with many different problems doesn't make one giant request
+        foreach (var batch in groups.Chunk(_options.MaxGroupsPerRequest))
         {
             var request = new MessageCreateParams
             {
@@ -52,7 +52,7 @@ public sealed class ClaudeLinkAdvisor(AnthropicClient client, IOptions<AiOptions
             var json = string.Concat(response.Content
                 .Select(block => block.TryPickText(out var text) ? text.Text : ""));
 
-            advice.AddRange(LinkAdviceParser.Parse(json, batch.Select(link => link.Url).ToList()));
+            advice.AddRange(LinkAdviceParser.Parse(json, batch.Select(group => group.Id).ToList()));
         }
 
         return advice;

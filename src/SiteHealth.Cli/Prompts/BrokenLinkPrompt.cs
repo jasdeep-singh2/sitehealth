@@ -8,46 +8,55 @@ namespace SiteHealth.Cli.Prompts;
 public static class BrokenLinkPrompt
 {
     /// <summary>
+    /// How many example URLs we show per group. A few examples give Claude enough context;
+    /// sending all 38 identical 404s would only cost tokens.
+    /// </summary>
+    public const int MaxExamplesPerGroup = 3;
+
+    /// <summary>
     /// The system prompt: who Claude is in this conversation and what a good answer looks like.
     /// </summary>
     public const string System = """
         You are a website maintenance assistant. You help web developers fix broken links.
 
-        For each broken link you are given, explain:
-        - cause: the most likely reason it is broken, in one or two plain sentences.
+        The broken links are grouped: every link in a group has the same problem and is either
+        on the same site as the checked page or on another site. For each group, explain:
+        - cause: the most likely reason these links are broken, in one or two plain sentences.
           Base it on the status code or error. Don't claim to know things you can't see.
-        - fix: one practical action the developer can take, such as adding a redirect,
-          updating or removing the link, or checking whether the other site is down.
-        - severity: "high" for links to pages on the same site (users hit a dead end and it hurts SEO),
+        - fix: one practical action the developer can take, such as adding redirects,
+          updating or removing the links, or checking whether the other site is down.
+        - severity: "high" for links on the same site (users hit a dead end and it hurts SEO),
           "medium" for links to other sites, "low" for minor cases such as a temporary timeout.
 
-        Return exactly one entry per broken link, using the link's URL exactly as given.
+        Return exactly one entry per group, using the group number exactly as given.
         """;
 
     /// <summary>
-    /// The user message: the facts about this page and its broken links.
-    /// One line per link, for example:
-    ///   - https://example.com/old-page | status 404
-    ///   - https://down.example.com/ | no response (No such host is known.)
+    /// The user message: the facts about this page and its groups of broken links.
+    /// One line per group, for example:
+    ///   - group 1 | same site | status 404 | 38 links | e.g. https://example.com/a, https://example.com/b, https://example.com/c
+    ///   - group 2 | other site | no response (No such host is known.) | 1 link | e.g. https://down.example.org/
     /// </summary>
-    // STEP 4a: you write this.
-    //
-    // Goal: build the text we send to Claude. Tests: tests/SiteHealth.Cli.Tests/BrokenLinkPromptTests.cs
-    public static string BuildUserMessage(Uri pageUrl, IEnumerable<LinkCheckResult> brokenLinks)
+    public static string BuildUserMessage(Uri pageUrl, IEnumerable<LinkGroup> groups)
     {
         var message = new StringBuilder();
         message.AppendLine($"Page checked: {pageUrl}");
         message.AppendLine();
-        message.AppendLine("Broken links found on this page:");
+        message.AppendLine("Groups of broken links found on this page:");
 
-        foreach (var link in brokenLinks)
+        foreach (var group in groups)
         {
-            // If there's a status code, say "status 404". If not, say "no response (the error)".
-            var problem = link.StatusCode is int status
-                ? $"status {status}"                 // Blank 1
-                : $"no response ({link.Error})";         // Blank 2
+            var site = group.IsSameSite ? "same site" : "other site";
 
-            message.AppendLine($"- {link.Url} | {problem}");   // Blank 3
+            // For links that never answered, the first error message tells Claude more than "no response" alone
+            var problem = group.Problem == "no response" && group.Links[0].Error is { } error
+                ? $"no response ({error})"
+                : group.Problem;
+
+            var count = group.Links.Count == 1 ? "1 link" : $"{group.Links.Count} links";
+            var examples = string.Join(", ", group.Links.Take(MaxExamplesPerGroup).Select(link => link.Url));
+
+            message.AppendLine($"- group {group.Id} | {site} | {problem} | {count} | e.g. {examples}");
         }
 
         return message.ToString();
@@ -65,12 +74,12 @@ public static class BrokenLinkPrompt
               "items": {
                 "type": "object",
                 "properties": {
-                  "url": { "type": "string" },
+                  "group": { "type": "integer" },
                   "cause": { "type": "string" },
                   "fix": { "type": "string" },
                   "severity": { "type": "string", "enum": ["high", "medium", "low"] }
                 },
-                "required": ["url", "cause", "fix", "severity"],
+                "required": ["group", "cause", "fix", "severity"],
                 "additionalProperties": false
               }
             }

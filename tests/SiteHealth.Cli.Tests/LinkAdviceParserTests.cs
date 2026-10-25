@@ -1,32 +1,29 @@
 namespace SiteHealth.Cli.Tests;
 
-// Step 4b: these tests fail until you fill in the blanks in LinkAdviceParser.Parse.
 public class LinkAdviceParserTests
 {
-    private static readonly Uri OldPage = new("https://example.com/old-page");
-    private static readonly Uri DownSite = new("https://down.example.com/");
-    private static readonly Uri[] AskedAbout = [OldPage, DownSite];
+    private static readonly int[] AskedAbout = [1, 2];
 
     [Fact]
     public void Turns_valid_json_into_advice()
     {
         const string json = """
             {"advice": [
-              {"url": "https://example.com/old-page", "cause": "Page was moved.", "fix": "Add a redirect.", "severity": "high"}
+              {"group": 1, "cause": "Pages were moved.", "fix": "Add redirects.", "severity": "high"}
             ]}
             """;
 
         var advice = LinkAdviceParser.Parse(json, AskedAbout);
 
-        Assert.Equal(new LinkAdvice(OldPage, "Page was moved.", "Add a redirect.", "high"), Assert.Single(advice));
+        Assert.Equal(new LinkAdvice(1, "Pages were moved.", "Add redirects.", "high"), Assert.Single(advice));
     }
 
     [Fact]
-    public void Skips_urls_we_did_not_ask_about()
+    public void Skips_groups_we_did_not_ask_about()
     {
         const string json = """
             {"advice": [
-              {"url": "https://made-up.example.com/", "cause": "x", "fix": "y", "severity": "low"}
+              {"group": 99, "cause": "x", "fix": "y", "severity": "low"}
             ]}
             """;
 
@@ -34,11 +31,24 @@ public class LinkAdviceParserTests
     }
 
     [Fact]
+    public void Keeps_only_the_first_answer_for_a_group()
+    {
+        const string json = """
+            {"advice": [
+              {"group": 1, "cause": "First.", "fix": "Fix one.", "severity": "high"},
+              {"group": 1, "cause": "Second.", "fix": "Fix two.", "severity": "low"}
+            ]}
+            """;
+
+        Assert.Equal("First.", Assert.Single(LinkAdviceParser.Parse(json, AskedAbout)).Cause);
+    }
+
+    [Fact]
     public void Skips_unknown_severity()
     {
         const string json = """
             {"advice": [
-              {"url": "https://example.com/old-page", "cause": "x", "fix": "y", "severity": "catastrophic"}
+              {"group": 1, "cause": "x", "fix": "y", "severity": "catastrophic"}
             ]}
             """;
 
@@ -50,8 +60,8 @@ public class LinkAdviceParserTests
     {
         const string json = """
             {"advice": [
-              {"url": "https://example.com/old-page", "cause": "   ", "fix": "Add a redirect.", "severity": "high"},
-              {"url": "https://down.example.com/", "cause": "Site is down.", "fix": "", "severity": "medium"}
+              {"group": 1, "cause": "   ", "fix": "Add redirects.", "severity": "high"},
+              {"group": 2, "cause": "Site is down.", "fix": "", "severity": "medium"}
             ]}
             """;
 
@@ -63,7 +73,7 @@ public class LinkAdviceParserTests
     {
         const string json = """
             {"advice": [
-              {"url": "https://down.example.com/", "cause": "  Site is down.  ", "fix": " Remove the link. ", "severity": "medium"}
+              {"group": 2, "cause": "  Site is down.  ", "fix": " Remove the link. ", "severity": "medium"}
             ]}
             """;
 
