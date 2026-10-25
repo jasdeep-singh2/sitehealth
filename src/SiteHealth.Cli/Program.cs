@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Anthropic;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using SiteHealth.Cli;
@@ -24,6 +25,16 @@ builder.Services.AddSingleton<LinkExtractor>();
 builder.Services.AddHttpClient<PageFetcher>(ConfigureCrawlerClient);
 builder.Services.AddHttpClient<LinkChecker>(ConfigureCrawlerClient);
 
+// AI advice is optional: it's only switched on when an API key is available.
+// AnthropicClient reads ANTHROPIC_API_KEY itself, so the key never appears in our code or config.
+builder.Services.Configure<AiOptions>(builder.Configuration.GetSection(AiOptions.SectionName));
+var aiEnabled = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY"));
+if (aiEnabled)
+{
+    builder.Services.AddSingleton(_ => new AnthropicClient());
+    builder.Services.AddSingleton<ILinkAdvisor, ClaudeLinkAdvisor>();
+}
+
 using var host = builder.Build();
 
 using var cts = new CancellationTokenSource();
@@ -46,17 +57,53 @@ Console.WriteLine($"Found {links.Count} links. Checking them...");
 var results = await checker.CheckAsync(links, cts.Token);
 var broken = results.Where(r => r.IsBroken).OrderBy(r => r.Url.ToString()).ToList();
 
+var adviceByUrl = await GetAdviceAsync(host.Services, startUrl, broken, cts.Token);
+
 Console.WriteLine();
 Console.WriteLine($"{broken.Count} broken out of {results.Count} links.");
 foreach (var result in broken)
 {
     var status = result.StatusCode?.ToString() ?? "ERR";
+    Console.WriteLine();
     Console.WriteLine($"  {status,-5} {result.Url}{(result.Error is null ? "" : $"  ({result.Error})")}");
+
+    if (adviceByUrl.TryGetValue(result.Url, out var advice))
+    {
+        Console.WriteLine($"        Severity: {advice.Severity.ToUpperInvariant()}");
+        Console.WriteLine($"        Cause:    {advice.Cause}");
+        Console.WriteLine($"        Fix:      {advice.Fix}");
+    }
 }
 
-// STEP 4 (next): send `broken` to Claude and print an explanation and suggested fix for each link.
-
 return broken.Count == 0 ? 0 : 2;
+
+// Asks Claude about the broken links. AI advice is a bonus: if it isn't configured or fails,
+// we say so and still show the link results.
+static async Task<Dictionary<Uri, LinkAdvice>> GetAdviceAsync(
+    IServiceProvider services, Uri pageUrl, IReadOnlyList<LinkCheckResult> broken, CancellationToken cancellationToken)
+{
+    if (broken.Count == 0)
+        return [];
+
+    var advisor = services.GetService<ILinkAdvisor>();
+    if (advisor is null)
+    {
+        Console.WriteLine("Tip: set the ANTHROPIC_API_KEY environment variable to get AI explanations and fixes.");
+        return [];
+    }
+
+    Console.WriteLine($"Asking Claude about {broken.Count} broken links...");
+    try
+    {
+        var advice = await advisor.AdviseAsync(pageUrl, broken, cancellationToken);
+        return advice.ToDictionary(a => a.Url);
+    }
+    catch (Exception ex) when (ex is not OperationCanceledException)
+    {
+        Console.WriteLine($"AI advice unavailable: {ex.Message}");
+        return [];
+    }
+}
 
 static void ConfigureCrawlerClient(IServiceProvider services, HttpClient client)
 {
