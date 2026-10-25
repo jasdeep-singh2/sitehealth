@@ -14,14 +14,35 @@ public static class ScanEndpoints
 {
     public static IEndpointRouteBuilder MapScanEndpoints(this IEndpointRouteBuilder app)
     {
-        var scans = app.MapGroup("/scans");
-        scans.MapPost("", CreateScanAsync).RequireRateLimiting(ScanRateLimits.CreateScan);
-        scans.MapGet("/{id:guid}", GetScanAsync).RequireRateLimiting(ScanRateLimits.ReadScan);
+        var scans = app.MapGroup("/scans").WithTags("Scans");
+
+        // WithName becomes the OpenAPI "operationId": a stable name the generated web client can use.
+        // ProducesProblem adds the error responses that the Results<...> types below can't show:
+        // ProblemHttpResult could be any status, and 429 comes from the rate limiter, not the endpoint.
+        scans.MapPost("", CreateScanAsync)
+            .WithName("CreateScan")
+            .WithSummary("Start a scan")
+            .WithDescription("Queues a scan of one public web page and answers straight away with 202 Accepted. "
+                + "Follow the Location header (GET /scans/{id}) to see how it's going.")
+            .ProducesProblem(StatusCodes.Status429TooManyRequests)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable)
+            .RequireRateLimiting(ScanRateLimits.CreateScan);
+
+        scans.MapGet("/{id:guid}", GetScanAsync)
+            .WithName("GetScan")
+            .WithSummary("Check on a scan")
+            .WithDescription("Returns the scan's status. Once it's Completed, the result holds the broken links, "
+                + "grouped by problem, with AI advice when it's switched on. Poll every few seconds until "
+                + "the status is Completed or Failed.")
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status429TooManyRequests)
+            .RequireRateLimiting(ScanRateLimits.ReadScan);
+
         return app;
     }
 
     // The Results<...> return type lists every response this endpoint can give. The compiler checks
-    // we only return those, and it documents the endpoint for OpenAPI later.
+    // we only return those, and OpenAPI reads the success and validation responses from it.
     private static async Task<Results<Accepted<ScanResponse>, ValidationProblem, ProblemHttpResult>> CreateScanAsync(
         CreateScanRequest request,
         IScanStore store,

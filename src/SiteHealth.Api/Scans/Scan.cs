@@ -20,6 +20,10 @@ public enum ScanStatus
 /// A version 7 GUID: unique, and its text sorts by creation time. (SQL Server compares GUIDs by their
 /// last bytes first, so this doesn't make SQL Server's index sequential; that only matters at large scale.)
 /// </param>
+/// <param name="Url">The page to scan.</param>
+/// <param name="Status">Where the scan is in its life.</param>
+/// <param name="CreatedAt">When the scan was requested.</param>
+/// <param name="CompletedAt">When the scan finished, successfully or not.</param>
 /// <param name="Error">Why the scan failed. Only set when <paramref name="Status"/> is Failed.</param>
 /// <param name="Report">What the scan found. Only set when <paramref name="Status"/> is Completed.</param>
 public sealed record Scan(

@@ -40,6 +40,15 @@ jobs:
       - name: Build
         run: dotnet build --configuration Release --no-restore
 
+      # The build rewrites src/SiteHealth.Api/openapi/openapi.json. If it changed, someone changed the API
+      # without committing the new document, and the web app's generated types would be out of date.
+      - name: Check the OpenAPI document is up to date
+        run: |
+          if ! git diff --exit-code -- src/SiteHealth.Api/openapi/openapi.json; then
+            echo "::error::openapi.json is out of date. Build the solution and commit src/SiteHealth.Api/openapi/openapi.json."
+            exit 1
+          fi
+
       - name: Test
         run: dotnet test --configuration Release --no-build --logger "trx;LogFilePrefix=results"
 

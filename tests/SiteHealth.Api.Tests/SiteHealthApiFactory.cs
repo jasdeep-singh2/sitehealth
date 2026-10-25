@@ -29,19 +29,26 @@ public sealed class SiteHealthApiFactory : WebApplicationFactory<Program>
     private readonly Func<HttpRequestMessage, HttpResponseMessage> _respond;
     private readonly Action<IServiceCollection>? _configureServices;
     private readonly Dictionary<string, string?> _settings;
+    private readonly string _environment;
     private readonly string _databasePath = Path.Combine(Path.GetTempPath(), $"sitehealth-test-{Guid.NewGuid():N}.db");
     private readonly string _connectionString;
 
     /// <param name="existingScans">Scans to put in the database before the app (and its worker) starts.</param>
     /// <param name="settings">Configuration values to override, e.g. ["RateLimit:ScansPerMinute"] = "2".</param>
+    /// <param name="environment">
+    /// "Testing" by default, so appsettings.Development.json (which runs SQL Server migrations) isn't loaded.
+    /// Tests of Development-only features pass "Development" and switch migrations off in <paramref name="settings"/>.
+    /// </param>
     public SiteHealthApiFactory(
         Func<HttpRequestMessage, HttpResponseMessage> respond,
         Action<IServiceCollection>? configureServices = null,
         IEnumerable<Scan>? existingScans = null,
-        IDictionary<string, string?>? settings = null)
+        IDictionary<string, string?>? settings = null,
+        string environment = "Testing")
     {
         _respond = respond;
         _configureServices = configureServices;
+        _environment = environment;
 
         // Tests poll GET /scans/{id} every 25 ms, so the real limits would trip them. Rate-limit tests set their own.
         _settings = new Dictionary<string, string?>
@@ -63,8 +70,7 @@ public sealed class SiteHealthApiFactory : WebApplicationFactory<Program>
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        // Not "Development", so appsettings.Development.json (which runs SQL Server migrations) isn't loaded
-        builder.UseEnvironment("Testing");
+        builder.UseEnvironment(_environment);
         builder.ConfigureAppConfiguration(config => config.AddInMemoryCollection(_settings));
 
         builder.ConfigureTestServices(services =>
