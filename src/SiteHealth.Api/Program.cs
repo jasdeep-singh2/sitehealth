@@ -11,6 +11,7 @@ builder.Services.AddScans(builder.Configuration);
 builder.Services.AddScanRateLimits(builder.Configuration);
 builder.Services.AddProxySupport(builder.Configuration);
 builder.Services.AddDashboardCors(builder.Configuration);
+builder.Services.AddHealthEndpoints();
 
 // Errors come back as ProblemDetails (RFC 9457): one standard JSON shape for every error
 builder.Services.AddProblemDetails();
@@ -45,6 +46,7 @@ app.UseDashboardCors();
 app.UseRateLimiter();
 
 app.MapScanEndpoints();
+app.MapHealthEndpoints();
 
 // On your own machine: the document at /openapi/v1.json, and Scalar at /scalar, a page for reading the
 // API and trying requests in the browser. Not mapped in production yet; the build writes the document
