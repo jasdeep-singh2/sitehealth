@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.Extensions.Options;
 using SiteHealth.Core;
+using SiteHealth.Core.Security;
 
 namespace SiteHealth.Api.Scans;
 
@@ -25,6 +27,7 @@ public static class ScanEndpoints
         IScanStore store,
         IScanQueue queue,
         TimeProvider time,
+        IOptions<CrawlerOptions> crawlerOptions,
         CancellationToken cancellationToken)
     {
         if (!HttpUrl.TryParse(request.Url, out var url))
@@ -32,6 +35,16 @@ public static class ScanEndpoints
             return TypedResults.ValidationProblem(new Dictionary<string, string[]>
             {
                 ["url"] = ["Enter an absolute http or https URL, for example https://example.com."],
+            });
+        }
+
+        // A quick, friendly "no" for obvious cases like http://localhost or http://10.0.0.1.
+        // The real protection is PublicNetworkConnector, which also catches redirects and tricky DNS.
+        if (!crawlerOptions.Value.AllowPrivateNetworks && PublicAddressPolicy.IsObviouslyPrivate(url))
+        {
+            return TypedResults.ValidationProblem(new Dictionary<string, string[]>
+            {
+                ["url"] = ["SiteHealth can only scan public websites. Local, private and internal addresses aren't allowed."],
             });
         }
 

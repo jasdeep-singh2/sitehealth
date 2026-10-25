@@ -2,6 +2,7 @@ using Anthropic;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using SiteHealth.Core.Security;
 
 namespace SiteHealth.Core;
 
@@ -14,8 +15,9 @@ public static class ServiceCollectionExtensions
     {
         services.Configure<CrawlerOptions>(configuration.GetSection(CrawlerOptions.SectionName));
         services.AddSingleton<LinkExtractor>();
-        services.AddHttpClient<PageFetcher>(ConfigureCrawlerClient);
-        services.AddHttpClient<LinkChecker>(ConfigureCrawlerClient);
+        // Both clients reach websites through the SSRF-guarded handler (see CrawlerHttpHandler)
+        services.AddHttpClient<PageFetcher>(ConfigureCrawlerClient).ConfigurePrimaryHttpMessageHandler(CreateCrawlerHandler);
+        services.AddHttpClient<LinkChecker>(ConfigureCrawlerClient).ConfigurePrimaryHttpMessageHandler(CreateCrawlerHandler);
         services.AddTransient<ScanRunner>();
 
         // AI advice is optional: it's only switched on when an API key is available.
@@ -36,4 +38,7 @@ public static class ServiceCollectionExtensions
         client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
         client.DefaultRequestHeaders.UserAgent.ParseAdd(options.UserAgent);
     }
+
+    private static HttpMessageHandler CreateCrawlerHandler(IServiceProvider services) =>
+        CrawlerHttpHandler.Create(services.GetRequiredService<IOptions<CrawlerOptions>>().Value);
 }
