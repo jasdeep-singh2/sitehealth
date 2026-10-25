@@ -1,0 +1,430 @@
+{
+  "openapi": "3.1.1",
+  "info": {
+    "title": "SiteHealth API",
+    "description": "Start a scan of a web page and check on it. A scan finds broken links, groups them by problem and, when AI is switched on, explains each group with a suggested fix.",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/scans": {
+      "post": {
+        "tags": [
+          "Scans"
+        ],
+        "summary": "Start a scan",
+        "description": "Queues a scan of one public web page and answers straight away with 202 Accepted. Follow the Location header (GET /scans/{id}) to see how it's going.",
+        "operationId": "CreateScan",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateScanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScanResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/scans/{id}": {
+      "get": {
+        "tags": [
+          "Scans"
+        ],
+        "summary": "Check on a scan",
+        "description": "Returns the scan's status. Once it's Completed, the result holds the broken links, grouped by problem, with AI advice when it's switched on. Poll every few seconds until the status is Completed or Failed.",
+        "operationId": "GetScan",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScanResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Advice": {
+        "required": [
+          "severity",
+          "cause",
+          "fix"
+        ],
+        "type": "object",
+        "properties": {
+          "severity": {
+            "type": "string",
+            "description": "\"high\", \"medium\" or \"low\"."
+          },
+          "cause": {
+            "type": "string",
+            "description": "The most likely reason the links are broken."
+          },
+          "fix": {
+            "type": "string",
+            "description": "One practical way to fix them."
+          }
+        },
+        "description": "Claude's explanation for a group of broken links."
+      },
+      "BrokenLink": {
+        "required": [
+          "url",
+          "statusCode",
+          "error"
+        ],
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Where the link points."
+          },
+          "statusCode": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "description": "The HTTP status the link returned, or null when there was no response.",
+            "format": "int32"
+          },
+          "error": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Why there was no response (for example a timeout). Null when there was a status code."
+          }
+        },
+        "description": "One broken link."
+      },
+      "BrokenLinkGroup": {
+        "required": [
+          "id",
+          "isSameSite",
+          "problem",
+          "advice",
+          "links"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "1, 2, 3... in display order.",
+            "format": "int32"
+          },
+          "isSameSite": {
+            "type": "boolean",
+            "description": "True when the links point at the same site as the scanned page."
+          },
+          "problem": {
+            "type": "string",
+            "description": "What went wrong: \"status 404\", \"timed out\" or \"no response\"."
+          },
+          "advice": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "description": "Claude's explanation for the group, or null when AI is off or failed.",
+                "$ref": "#/components/schemas/Advice"
+              }
+            ]
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BrokenLink"
+            },
+            "description": "The broken links in this group, sorted by URL."
+          }
+        },
+        "description": "Broken links that share the same problem."
+      },
+      "CreateScanRequest": {
+        "required": [
+          "url"
+        ],
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "The public web page to scan: an absolute http or https URL, for example https://example.com."
+          }
+        },
+        "description": "Body of POST /scans."
+      },
+      "HttpValidationProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "detail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "instance": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "errors": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "ProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "detail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "instance": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "ScanResponse": {
+        "required": [
+          "id",
+          "url",
+          "status",
+          "createdAt",
+          "completedAt",
+          "error",
+          "result"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "The scan's ID, used in GET /scans/{id}.",
+            "format": "uuid"
+          },
+          "url": {
+            "type": "string",
+            "description": "The page being scanned."
+          },
+          "status": {
+            "description": "Queued, then Running, then Completed or Failed.",
+            "$ref": "#/components/schemas/ScanStatus"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "When the scan was requested.",
+            "format": "date-time"
+          },
+          "completedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "When the scan finished, successfully or not. Null while it's Queued or Running.",
+            "format": "date-time"
+          },
+          "error": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Why the scan failed. Only set when the status is Failed."
+          },
+          "result": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "description": "What the scan found. Only set when the status is Completed.",
+                "$ref": "#/components/schemas/ScanResult"
+              }
+            ]
+          }
+        },
+        "description": "What GET /scans/{id} returns. ScanResult? ScanResponse.Result is only set once the scan has completed."
+      },
+      "ScanResult": {
+        "required": [
+          "linksChecked",
+          "linksSkipped",
+          "brokenCount",
+          "groups"
+        ],
+        "type": "object",
+        "properties": {
+          "linksChecked": {
+            "type": "integer",
+            "description": "How many links on the page were checked.",
+            "format": "int32"
+          },
+          "linksSkipped": {
+            "type": "integer",
+            "description": "Links found but not checked, because the page had more than the per-page limit.",
+            "format": "int32"
+          },
+          "brokenCount": {
+            "type": "integer",
+            "description": "How many of the checked links are broken.",
+            "format": "int32"
+          },
+          "groups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BrokenLinkGroup"
+            },
+            "description": "The broken links, grouped by problem: same-site groups first, then the biggest."
+          }
+        },
+        "description": "What a completed scan found."
+      },
+      "ScanStatus": {
+        "enum": [
+          "Queued",
+          "Running",
+          "Completed",
+          "Failed"
+        ],
+        "description": "Where a scan is in its life: Queued → Running → Completed or Failed."
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Scans"
+    }
+  ]
+}
