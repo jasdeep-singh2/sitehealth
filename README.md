@@ -6,7 +6,7 @@ AI-powered website health monitor: .NET, React, Azure and Claude. Built in publi
 
 SiteHealth crawls a website, finds broken links, SEO problems, slow pages and accessibility issues, and uses Claude to explain each problem and suggest a fix. Results show up in a dashboard and, later, directly inside the Optimizely CMS editor.
 
-> **Status:** Day 2 done: a CLI link checker that asks Claude to explain broken links and suggest fixes. Follow along in the [Learning log](#learning-log) and on my [blog](https://jasdeep.hashnode.dev).
+> **Status:** Day 3 done: a web dashboard and API that scan a page in the background, group the broken links by problem and ask Claude to explain them. Next up: deploying to Azure. Follow along in the [Learning log](#learning-log) and on my [blog](https://jasdeep.hashnode.dev).
 
 ## Why I'm building this
 
@@ -38,8 +38,8 @@ Every Optimizely site needs to stay healthy, so this project is useful to me, to
 ### Phase 1: Foundations and MVP
 - [x] CLI link checker (fetch a page, extract links, check status codes)
 - [x] Claude explains broken links and suggests fixes (structured JSON)
-- [ ] ASP.NET Core API + background worker
-- [ ] React dashboard
+- [x] ASP.NET Core API + background worker
+- [x] React dashboard
 - [ ] Deploy to Azure (App Service / Static Web Apps, Azure SQL, Key Vault, Managed Identity)
 - [ ] CI/CD with GitHub Actions
 
@@ -67,7 +67,59 @@ Every Optimizely site needs to stay healthy, so this project is useful to me, to
 
 ## Getting started
 
-_Coming soon, once the first runnable code lands._
+### What you need
+
+- [.NET 10 SDK](https://dotnet.microsoft.com/download)
+- [Node.js 24](https://nodejs.org/) for the dashboard
+- SQL Server LocalDB for the API's database. It comes with Visual Studio on Windows; any SQL Server works if you change the `SiteHealth` connection string in `src/SiteHealth.Api/appsettings.json`.
+- Optional: an Anthropic API key in the `ANTHROPIC_API_KEY` environment variable, for AI explanations. Everything else works without it.
+
+### Run the dashboard
+
+In one terminal, start the API. In Development it creates the database on first run.
+
+```bash
+dotnet run --project src/SiteHealth.Api
+```
+
+In a second terminal, start the dashboard and open http://localhost:5173:
+
+```bash
+cd web
+npm install
+npm run dev
+```
+
+The API also serves an interactive reference at http://localhost:5080/scalar while it runs.
+
+### Or use the command line
+
+```bash
+dotnet run --project src/SiteHealth.Cli -- https://your-site.com
+```
+
+The CLI can also scan local sites such as `http://localhost:3000`; the API refuses private addresses.
+
+### Run the tests
+
+```bash
+dotnet test
+```
+
+```bash
+cd web
+npm test
+```
+
+### What's in the repo
+
+| Folder | What it is |
+|---|---|
+| `src/SiteHealth.Core` | The scanning logic: fetch a page, check its links, group the broken ones, ask Claude |
+| `src/SiteHealth.Api` | ASP.NET Core API, background worker, EF Core database and OpenAPI document |
+| `src/SiteHealth.Cli` | The command-line tool |
+| `web` | The React dashboard |
+| `tests` | xUnit tests for Core and the API |
 
 ## Learning log
 
@@ -75,6 +127,7 @@ _Coming soon, once the first runnable code lands._
 |---|---|---|---|
 | 1 | Set up tools, API key and this repo. Built the CLI link checker with 15 tests ([blog post](https://jasdeep.hashnode.dev/building-an-ai-powered-website-health-checker-in-net)) | `IHttpClientFactory` and testable HTTP code, polite parallel requests (back-pressure), telling a timeout apart from Ctrl+C | Send broken links to Claude for explanations and fixes |
 | 2 | Sent broken links to Claude and got back a cause, fix and severity for each, as structured JSON. AI is optional, and the tests never call the API (24 tests) | Treat prompts as code, structured outputs beat parsing text, validate AI output like any other input, keep AI behind an interface | Fix the crash when the start page can't be fetched, group repeated advice, then the API + background worker |
+| 3 | Fixed the start-page crash and grouped broken links before asking Claude. Split the code into a Core library, then built an API with a background worker and queue, stored scans with EF Core, blocked SSRF, added rate limits, CI, OpenAPI and a React dashboard | Asynchronous request-reply (202 + polling), the Result pattern, `Channel<T>` as a queue, SSRF and checking IPs at connect time, rate limiting, contract-first types from OpenAPI, TanStack Query polling | Deploy to Azure |
 
 ## Follow along
 

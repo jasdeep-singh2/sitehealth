@@ -27,7 +27,7 @@ public sealed class PageFetcher(HttpClient httpClient)
         catch (HttpRequestException ex)
         {
             // No response at all (DNS failure, refused connection), so no status code.
-            return new PageFetchResult(url, null, null, ex.Message);
+            return new PageFetchResult(url, null, null, ConnectionErrors.Describe(ex));
         }
         catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
         {

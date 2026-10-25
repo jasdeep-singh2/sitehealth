@@ -70,3 +70,46 @@ jobs:
           name: test-results
           path: "**/TestResults/*.trx"
           retention-days: 7
+
+  # The React dashboard. Runs at the same time as the .NET job, on its own machine.
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      # npm ci installs exactly what package-lock.json says, so CI uses the same versions as your machine
+      - name: Install
+        run: npm ci
+
+      # schema.d.ts must match the committed openapi.json; regenerate it and fail if anything changed
+      - name: Check the API types are up to date
+        run: |
+          npm run generate:api
+          if ! git diff --exit-code -- src/api/schema.d.ts; then
+            echo "::error::web/src/api/schema.d.ts is out of date. Run 'npm run generate:api' in web/ and commit it."
+            exit 1
+          fi
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      # Type-checks everything (tests included) and makes sure the production build works
+      - name: Build
+        run: npm run build
+
+      - name: Check for vulnerable packages
+        run: npm audit --audit-level=high

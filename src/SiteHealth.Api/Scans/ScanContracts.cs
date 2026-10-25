@@ -9,7 +9,7 @@ namespace SiteHealth.Api.Scans;
 /// <param name="Url">The public web page to scan: an absolute http or https URL, for example https://example.com.</param>
 public sealed record CreateScanRequest(string? Url);
 
-/// <summary>What GET /scans/{id} returns. <see cref="Result"/> is only set once the scan has completed.</summary>
+/// <summary>What GET /scans/{id} returns. The result is only set once the scan has completed.</summary>
 /// <param name="Id">The scan's ID, used in GET /scans/{id}.</param>
 /// <param name="Url">The page being scanned.</param>
 /// <param name="Status">Queued, then Running, then Completed or Failed.</param>

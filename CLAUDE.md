@@ -55,4 +55,7 @@ _Fill in as the solution grows:_
 - Build: `dotnet build`
 - Test: `dotnet test`
 - Run CLI: `dotnet run --project src/SiteHealth.Cli -- <url>`
-- Run API: `dotnet run --project src/SiteHealth.Api` (http://localhost:5080, try it with `src/SiteHealth.Api/SiteHealth.Api.http`)
+- Run API: `dotnet run --project src/SiteHealth.Api` (http://localhost:5080, Scalar at /scalar, or `src/SiteHealth.Api/SiteHealth.Api.http`)
+- Run dashboard: `cd web && npm run dev` (http://localhost:5173; forwards /api to the API)
+- Web tests and lint: `cd web && npm test && npm run lint`
+- After changing the API's contract: build, then `cd web && npm run generate:api`, and commit `openapi.json` and `schema.d.ts`
