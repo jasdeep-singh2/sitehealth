@@ -1,5 +1,7 @@
 # SiteHealth
 
+[![CI](https://github.com/jasdeep-singh2/sitehealth/actions/workflows/ci.yml/badge.svg)](https://github.com/jasdeep-singh2/sitehealth/actions/workflows/ci.yml)
+
 AI-powered website health monitor: .NET, React, Azure and Claude. Built in public.
 
 SiteHealth crawls a website, finds broken links, SEO problems, slow pages and accessibility issues, and uses Claude to explain each problem and suggest a fix. Results show up in a dashboard and, later, directly inside the Optimizely CMS editor.
