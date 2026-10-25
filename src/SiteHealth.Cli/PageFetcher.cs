@@ -7,19 +7,33 @@ namespace SiteHealth.Cli;
 /// </summary>
 public sealed class PageFetcher(HttpClient httpClient)
 {
-    // STEP 1: you write this.
-    //
-    // Goal: return the page's HTML as a string.
-    //  - Use httpClient.GetAsync(url, cancellationToken).
-    //  - If the response isn't a success status, throw (hint: EnsureSuccessStatusCode).
-    //  - Read the body with response.Content.ReadAsStringAsync(cancellationToken).
-    //  - Dispose the response (a `using var response = ...` does it).
-    //
-    // Tests that define "done": tests/SiteHealth.Cli.Tests/PageFetcherTests.cs
-    public async Task<string> FetchHtmlAsync(Uri url, CancellationToken cancellationToken)
+    // Returns a PageFetchResult and never throws because the page couldn't be fetched.
+    // This is the Result pattern: an unreachable site is an expected outcome, so it's data
+    // the caller can test and report, not an exception that crashes the CLI.
+    public async Task<PageFetchResult> FetchAsync(Uri url, CancellationToken cancellationToken)
     {
-        using var response = await httpClient.GetAsync(url, cancellationToken);
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadAsStringAsync(cancellationToken);
+        try
+        {
+            using var response = await httpClient.GetAsync(url, cancellationToken);
+            var statusCode = (int)response.StatusCode;
+
+            // The server answered, but not with the page: keep the status so the caller can show it.
+            if (!response.IsSuccessStatusCode)
+                return new PageFetchResult(url, null, statusCode, $"{statusCode} {response.ReasonPhrase}".TrimEnd());
+
+            var html = await response.Content.ReadAsStringAsync(cancellationToken);
+            return new PageFetchResult(url, html, statusCode, null);
+        }
+        catch (HttpRequestException ex)
+        {
+            // No response at all (DNS failure, refused connection), so no status code.
+            return new PageFetchResult(url, null, null, ex.Message);
+        }
+        catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            // HttpClient's own timeout. If our token was cancelled (Ctrl+C), the filter is false
+            // and the exception bubbles up, because the caller asked to stop.
+            return new PageFetchResult(url, null, null, "Timed out");
+        }
     }
 }
