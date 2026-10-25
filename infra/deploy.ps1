@@ -38,7 +38,7 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 $template = Join-Path $PSScriptRoot 'main.bicep'
 
 # Runs the Azure CLI and stops the script if it fails. (PowerShell doesn't stop on a failing program by itself.)
-function Az {
+function Invoke-Az {
     $output = & az @args
     if ($LASTEXITCODE -ne 0) { throw "az $($args[0]) $($args[1]) failed (exit code $LASTEXITCODE)." }
     return $output
@@ -48,9 +48,9 @@ function Step([string]$text) { Write-Host "`n== $text" -ForegroundColor Cyan }
 
 # --- 1. Who and where -------------------------------------------------------------------------------------------
 Step 'Checking your Azure sign-in'
-$account = Az account show --query '{name:name, id:id, user:user.name}' -o json | ConvertFrom-Json
-$deployerId = Az ad signed-in-user show --query id -o tsv
-$deployerLogin = Az ad signed-in-user show --query userPrincipalName -o tsv
+$account = Invoke-Az account show --query '{name:name, id:id, user:user.name}' -o json | ConvertFrom-Json
+$deployerId = Invoke-Az ad signed-in-user show --query id -o tsv
+$deployerLogin = Invoke-Az ad signed-in-user show --query userPrincipalName -o tsv
 Write-Host "Subscription: $($account.name) ($($account.id))"
 Write-Host "Signed in as: $($account.user)"
 Write-Host "Resource group: $ResourceGroup in $Location, budget $BudgetAmount per month"
@@ -60,7 +60,7 @@ if (-not $Yes) {
     if ($answer -ne 'y') { Write-Host 'Stopped. Nothing was changed.'; exit 1 }
 }
 
-Az group create --name $ResourceGroup --location $Location --tags app=sitehealth -o none
+Invoke-Az group create --name $ResourceGroup --location $Location --tags app=sitehealth -o none
 
 $commonParams = @(
     "deployerObjectId=$deployerId",
@@ -71,7 +71,7 @@ $commonParams = @(
 
 # --- 2. Infrastructure, pass 1 ----------------------------------------------------------------------------------
 Step 'Deploying the infrastructure (pass 1 of 2, a few minutes the first time)'
-$outputs = Az deployment group create --resource-group $ResourceGroup --name sitehealth-infra `
+$outputs = Invoke-Az deployment group create --resource-group $ResourceGroup --name sitehealth-infra `
     --template-file $template --parameters @commonParams deployApi=false `
     --query properties.outputs -o json | ConvertFrom-Json
 $out = @{}
@@ -97,7 +97,7 @@ $firewallRule = 'deploy-script-client'
 try {
     for ($attempt = 1; ; $attempt++) {
         # A fresh token each attempt; your own Entra sign-in is the server's admin
-        $token = Az account get-access-token --resource https://database.windows.net/ --query accessToken -o tsv
+        $token = Invoke-Az account get-access-token --resource https://database.windows.net/ --query accessToken -o tsv
         $connection = New-Object System.Data.SqlClient.SqlConnection("Server=tcp:$($out.sqlServerFqdn),1433;Database=$($out.databaseName);Encrypt=True;Connect Timeout=60;")
         $connection.AccessToken = $token
         try {
@@ -117,7 +117,7 @@ try {
             # The server's firewall only lets Azure in. SQL's refusal names this computer's public IP; allow it briefly.
             if ($message -match "IP address '([0-9a-fA-F\.:]+)'") {
                 Write-Host "Allowing this computer ($($Matches[1])) through the SQL firewall for this step..."
-                Az sql server firewall-rule create --resource-group $ResourceGroup --server $out.sqlServerName `
+                Invoke-Az sql server firewall-rule create --resource-group $ResourceGroup --server $out.sqlServerName `
                     --name $firewallRule --start-ip-address $Matches[1] --end-ip-address $Matches[1] -o none
                 Start-Sleep -Seconds 15  # firewall changes take a moment
             }
@@ -144,7 +144,7 @@ $tag = "$commit-$(Get-Date -Format 'yyyyMMddHHmm')"
 $image = "$($out.registryLoginServer)/sitehealth-api:$tag"
 
 # dotnet publish pushes with a short-lived registry token, passed in environment variables for this step only
-$registryToken = Az acr login --name $out.registryName --expose-token --query accessToken -o tsv
+$registryToken = Invoke-Az acr login --name $out.registryName --expose-token --query accessToken -o tsv
 try {
     $env:DOTNET_CONTAINER_REGISTRY_UNAME = '00000000-0000-0000-0000-000000000000'
     $env:DOTNET_CONTAINER_REGISTRY_PWORD = $registryToken
@@ -165,7 +165,7 @@ if ($EnableAi) {
 }
 
 Step 'Deploying the API (pass 2 of 2)'
-$outputs = Az deployment group create --resource-group $ResourceGroup --name sitehealth-infra `
+$outputs = Invoke-Az deployment group create --resource-group $ResourceGroup --name sitehealth-infra `
     --template-file $template --parameters @commonParams deployApi=true "apiImage=$image" "enableAi=$($EnableAi.IsPresent.ToString().ToLower())" `
     --query properties.outputs -o json | ConvertFrom-Json
 $apiUrl = $outputs.apiUrl.value
@@ -197,7 +197,7 @@ if (-not $SkipWeb) {
         if ($LASTEXITCODE -ne 0) { throw 'npm run build failed.' }
 
         # The SWA CLI reads the deployment token from this variable, so it never appears on a command line
-        $env:SWA_CLI_DEPLOYMENT_TOKEN = Az staticwebapp secrets list --name $out.staticWebAppName --resource-group $ResourceGroup --query properties.apiKey -o tsv
+        $env:SWA_CLI_DEPLOYMENT_TOKEN = Invoke-Az staticwebapp secrets list --name $out.staticWebAppName --resource-group $ResourceGroup --query properties.apiKey -o tsv
         & npx.cmd --yes @azure/static-web-apps-cli deploy ./dist --env production
         if ($LASTEXITCODE -ne 0) { throw 'Uploading the dashboard failed.' }
     }
