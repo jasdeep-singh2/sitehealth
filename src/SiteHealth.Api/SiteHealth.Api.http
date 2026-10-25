@@ -1,0 +1,24 @@
+# Try the API from Visual Studio or VS Code (REST Client): click "Send Request" above each request.
+# Start it first with: dotnet run --project src/SiteHealth.Api
+
+@baseUrl = http://localhost:5080
+
+### Start a scan. The response is 202 Accepted with a Location header.
+# @name createScan
+POST {{baseUrl}}/scans
+Content-Type: application/json
+
+{
+  "url": "http://www.deadlinkcity.com/"
+}
+
+### Check on it. Repeat until status is "Completed" or "Failed".
+GET {{baseUrl}}/scans/{{createScan.response.body.$.id}}
+
+### An invalid URL gives 400 with ProblemDetails
+POST {{baseUrl}}/scans
+Content-Type: application/json
+
+{
+  "url": "not-a-url"
+}
