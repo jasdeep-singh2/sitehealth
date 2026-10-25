@@ -15,8 +15,8 @@ public static class ScanEndpoints
     public static IEndpointRouteBuilder MapScanEndpoints(this IEndpointRouteBuilder app)
     {
         var scans = app.MapGroup("/scans");
-        scans.MapPost("", CreateScanAsync);
-        scans.MapGet("/{id:guid}", GetScanAsync);
+        scans.MapPost("", CreateScanAsync).RequireRateLimiting(ScanRateLimits.CreateScan);
+        scans.MapGet("/{id:guid}", GetScanAsync).RequireRateLimiting(ScanRateLimits.ReadScan);
         return app;
     }
 
