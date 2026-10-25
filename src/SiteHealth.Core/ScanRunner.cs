@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Options;
+
 namespace SiteHealth.Core;
 
 /// <summary>
@@ -13,8 +15,11 @@ public sealed class ScanRunner(
     PageFetcher fetcher,
     LinkExtractor extractor,
     LinkChecker checker,
+    IOptions<CrawlerOptions> options,
     ILinkAdvisor? advisor = null)
 {
+    private readonly int _maxLinks = options.Value.MaxLinksPerPage;
+
     /// <summary>
     /// Scans <paramref name="pageUrl"/>. Status messages ("Fetching...", "Found 47 links...") go to
     /// <paramref name="progress"/>, so the CLI can print them and the worker can ignore or log them.
@@ -27,15 +32,20 @@ public sealed class ScanRunner(
             return ScanReport.FetchFailed(pageUrl, page.Error ?? "Unknown error");
 
         var links = extractor.ExtractLinks(page.Html, pageUrl);
-        progress?.Report($"Found {links.Count} links. Checking them...");
 
-        var results = await checker.CheckAsync(links, cancellationToken);
+        // Check at most MaxLinksPerPage links, in the order they appear on the page
+        var skipped = Math.Max(0, links.Count - _maxLinks);
+        progress?.Report(skipped == 0
+            ? $"Found {links.Count} links. Checking them..."
+            : $"Found {links.Count} links. Checking the first {_maxLinks} (the limit per page)...");
+
+        var results = await checker.CheckAsync(links.Take(_maxLinks), cancellationToken);
         var broken = results.Where(r => r.IsBroken).ToList();
         var groups = LinkGrouper.Group(pageUrl, broken);
 
         var adviceByGroup = await GetAdviceAsync(pageUrl, groups, progress, cancellationToken);
 
-        return new ScanReport(pageUrl, null, results.Count, broken.Count, groups, adviceByGroup);
+        return new ScanReport(pageUrl, null, results.Count, broken.Count, groups, adviceByGroup, skipped);
     }
 
     // AI advice is a bonus: if it isn't configured or fails, we say so and still return the link results.

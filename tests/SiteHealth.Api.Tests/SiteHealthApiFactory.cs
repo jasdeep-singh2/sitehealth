@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using SiteHealth.Api.Data;
@@ -27,17 +28,29 @@ public sealed class SiteHealthApiFactory : WebApplicationFactory<Program>
 {
     private readonly Func<HttpRequestMessage, HttpResponseMessage> _respond;
     private readonly Action<IServiceCollection>? _configureServices;
+    private readonly Dictionary<string, string?> _settings;
     private readonly string _databasePath = Path.Combine(Path.GetTempPath(), $"sitehealth-test-{Guid.NewGuid():N}.db");
     private readonly string _connectionString;
 
     /// <param name="existingScans">Scans to put in the database before the app (and its worker) starts.</param>
+    /// <param name="settings">Configuration values to override, e.g. ["RateLimit:ScansPerMinute"] = "2".</param>
     public SiteHealthApiFactory(
         Func<HttpRequestMessage, HttpResponseMessage> respond,
         Action<IServiceCollection>? configureServices = null,
-        IEnumerable<Scan>? existingScans = null)
+        IEnumerable<Scan>? existingScans = null,
+        IDictionary<string, string?>? settings = null)
     {
         _respond = respond;
         _configureServices = configureServices;
+
+        // Tests poll GET /scans/{id} every 25 ms, so the real limits would trip them. Rate-limit tests set their own.
+        _settings = new Dictionary<string, string?>
+        {
+            ["RateLimit:ScansPerMinute"] = "1000",
+            ["RateLimit:ReadsPerMinute"] = "100000",
+        };
+        foreach (var (key, value) in settings ?? new Dictionary<string, string?>())
+            _settings[key] = value;
         _connectionString = new SqliteConnectionStringBuilder { DataSource = _databasePath }.ToString();
 
         // Create the tables now, before the worker starts and asks for unfinished scans.
@@ -52,6 +65,7 @@ public sealed class SiteHealthApiFactory : WebApplicationFactory<Program>
     {
         // Not "Development", so appsettings.Development.json (which runs SQL Server migrations) isn't loaded
         builder.UseEnvironment("Testing");
+        builder.ConfigureAppConfiguration(config => config.AddInMemoryCollection(_settings));
 
         builder.ConfigureTestServices(services =>
         {

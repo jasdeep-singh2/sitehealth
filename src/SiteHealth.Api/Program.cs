@@ -9,6 +9,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddSiteHealthCore(builder.Configuration);
 builder.Services.AddScans(builder.Configuration);
+builder.Services.AddScanRateLimits(builder.Configuration);
 
 // Errors come back as ProblemDetails (RFC 9457): one standard JSON shape for every error
 builder.Services.AddProblemDetails();
@@ -28,6 +29,7 @@ if (app.Services.GetRequiredService<IOptions<DatabaseOptions>>().Value.MigrateOn
 
 app.UseExceptionHandler();
 app.UseStatusCodePages();
+app.UseRateLimiter();
 
 app.MapScanEndpoints();
 

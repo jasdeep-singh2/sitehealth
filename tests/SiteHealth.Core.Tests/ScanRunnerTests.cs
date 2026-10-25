@@ -25,14 +25,32 @@ public class ScanRunnerTests
         _ => new HttpResponseMessage(HttpStatusCode.NotFound),
     };
 
-    private static ScanRunner CreateRunner(Func<HttpRequestMessage, HttpResponseMessage> respond, ILinkAdvisor? advisor = null)
+    private static ScanRunner CreateRunner(
+        Func<HttpRequestMessage, HttpResponseMessage> respond, ILinkAdvisor? advisor = null, CrawlerOptions? options = null)
     {
         var handler = new StubHttpMessageHandler(respond);
+        var crawlerOptions = Options.Create(options ?? new CrawlerOptions());
         return new ScanRunner(
             new PageFetcher(new HttpClient(handler)),
             new LinkExtractor(),
-            new LinkChecker(new HttpClient(handler), Options.Create(new CrawlerOptions())),
+            new LinkChecker(new HttpClient(handler), crawlerOptions),
+            crawlerOptions,
             advisor);
+    }
+
+    [Fact]
+    public async Task Checks_at_most_the_per_page_limit_of_links()
+    {
+        var progress = new ListProgress();
+        var runner = CreateRunner(Respond, options: new CrawlerOptions { MaxLinksPerPage = 2 });
+
+        var report = await runner.RunAsync(PageUrl, progress, CancellationToken.None);
+
+        // The page has /ok, /old-1, /old-2 in that order: the first two are checked, /old-2 is skipped
+        Assert.Equal(2, report.LinksChecked);
+        Assert.Equal(1, report.LinksSkipped);
+        Assert.Equal(1, report.BrokenCount);
+        Assert.Contains("Found 3 links. Checking the first 2 (the limit per page)...", progress.Messages);
     }
 
     [Fact]
