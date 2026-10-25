@@ -28,10 +28,12 @@ public sealed record ScanResponse(
         scan.Report is null ? null : ScanResult.From(scan.Report));
 }
 
-public sealed record ScanResult(int LinksChecked, int BrokenCount, IReadOnlyList<BrokenLinkGroup> Groups)
+/// <param name="LinksSkipped">Links found but not checked, because the page had more than the per-page limit.</param>
+public sealed record ScanResult(int LinksChecked, int LinksSkipped, int BrokenCount, IReadOnlyList<BrokenLinkGroup> Groups)
 {
     public static ScanResult From(ScanReport report) => new(
         report.LinksChecked,
+        report.LinksSkipped,
         report.BrokenCount,
         report.Groups.Select(group => BrokenLinkGroup.From(group, report.AdviceByGroup.GetValueOrDefault(group.Id))).ToList());
 }

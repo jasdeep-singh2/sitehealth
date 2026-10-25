@@ -40,6 +40,8 @@ if (report.FetchError is not null)
 
 Console.WriteLine();
 Console.WriteLine($"{report.BrokenCount} broken out of {report.LinksChecked} links, in {report.Groups.Count} groups.");
+if (report.LinksSkipped > 0)
+    Console.WriteLine($"{report.LinksSkipped} more links weren't checked (the limit is {report.LinksChecked} per page).");
 foreach (var group in report.Groups)
 {
     var site = group.IsSameSite ? "same site" : "other site";

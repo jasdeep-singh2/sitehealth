@@ -11,6 +11,12 @@ public sealed class CrawlerOptions
     /// <summary>How many links we check at the same time. Keep it low so we don't hammer the site.</summary>
     public int MaxConcurrency { get; set; } = 5;
 
+    /// <summary>
+    /// The most links we check on one page. Real pages rarely have more, and without a cap someone could
+    /// publish a page with thousands of links to one victim site and use SiteHealth to flood it.
+    /// </summary>
+    public int MaxLinksPerPage { get; set; } = 500;
+
     /// <summary>How long to wait for a single request before giving up.</summary>
     public int TimeoutSeconds { get; set; } = 15;
 
