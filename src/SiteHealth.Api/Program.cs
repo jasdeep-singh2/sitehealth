@@ -1,8 +1,5 @@
 using System.Text.Json.Serialization;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using Scalar.AspNetCore;
-using SiteHealth.Api.Data;
 using SiteHealth.Api.Scans;
 using SiteHealth.Core;
 
@@ -36,13 +33,6 @@ builder.Services.AddOpenApi(options => options.AddDocumentTransformer((document,
 }));
 
 var app = builder.Build();
-
-// On your own machine, create or update the database automatically (see DatabaseOptions)
-if (app.Services.GetRequiredService<IOptions<DatabaseOptions>>().Value.MigrateOnStartup)
-{
-    await using var db = await app.Services.GetRequiredService<IDbContextFactory<SiteHealthDbContext>>().CreateDbContextAsync();
-    await db.Database.MigrateAsync();
-}
 
 app.UseExceptionHandler();
 app.UseStatusCodePages();

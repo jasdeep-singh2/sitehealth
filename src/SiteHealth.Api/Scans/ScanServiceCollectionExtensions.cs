@@ -26,7 +26,13 @@ public static class ScanServiceCollectionExtensions
         // TimeProvider instead of DateTimeOffset.UtcNow, so tests can control the clock if they need to
         services.TryAddSingleton(TimeProvider.System);
 
-        services.AddHostedService<ScanWorker>();
+        // Both need the database, which a build doesn't have (see BuildTimeDocument).
+        // Order matters: hosted services start one after another, so the database is ready before the worker runs.
+        if (!BuildTimeDocument.IsBeingGenerated)
+        {
+            services.AddHostedService<DatabaseMigrator>();
+            services.AddHostedService<ScanWorker>();
+        }
         return services;
     }
 }
