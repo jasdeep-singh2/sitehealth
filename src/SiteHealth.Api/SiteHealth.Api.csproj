@@ -14,6 +14,12 @@
          web app can generate TypeScript types from it, and a PR's diff shows any change to the API. -->
     <OpenApiDocumentsDirectory>$(MSBuildProjectDirectory)/openapi</OpenApiDocumentsDirectory>
     <OpenApiGenerateDocumentsOptions>--file-name openapi</OpenApiGenerateDocumentsOptions>
+
+    <!-- Container image, built without a Dockerfile: dotnet publish -c Release /t:PublishContainer
+         "Chiseled" Ubuntu images hold only what a .NET app needs (no shell, no package manager) and run as a
+         non-root user. The "-extra" variant adds ICU and time zone data, which SqlClient needs. -->
+    <ContainerRepository>sitehealth-api</ContainerRepository>
+    <ContainerFamily>noble-chiseled-extra</ContainerFamily>
   </PropertyGroup>
 
   <ItemGroup>
