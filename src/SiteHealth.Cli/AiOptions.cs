@@ -17,8 +17,8 @@ public sealed class AiOptions
     /// </summary>
     public string Effort { get; set; } = "low";
 
-    /// <summary>Broken links sent per request. More links per request means fewer API calls.</summary>
-    public int MaxLinksPerRequest { get; set; } = 50;
+    /// <summary>Groups of broken links sent per request. More groups per request means fewer API calls.</summary>
+    public int MaxGroupsPerRequest { get; set; } = 50;
 
     /// <summary>Upper limit on the length of Claude's reply, in tokens.</summary>
     public int MaxTokens { get; set; } = 16000;
