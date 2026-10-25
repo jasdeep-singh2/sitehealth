@@ -22,4 +22,9 @@
     <ProjectReference Include="..\..\src\SiteHealth.Core\SiteHealth.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- For PublicNetworkConnectorTests, which start a small real web server (Kestrel) -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
 </Project>

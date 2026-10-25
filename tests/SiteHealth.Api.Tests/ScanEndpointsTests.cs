@@ -80,6 +80,24 @@ public class ScanEndpointsTests
         Assert.True(problem.GetProperty("errors").TryGetProperty("url", out _));
     }
 
+    [Theory]
+    [InlineData("http://localhost/")]
+    [InlineData("http://127.0.0.1:5080/scans")]
+    [InlineData("http://[::1]/")]
+    [InlineData("http://10.0.0.5/")]
+    [InlineData("http://169.254.169.254/latest/meta-data/")]
+    public async Task Post_rejects_private_and_internal_addresses(string url)
+    {
+        await using var factory = new SiteHealthApiFactory(FakeWebsite);
+        var client = factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/scans", new CreateScanRequest(url));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Contains("public websites", problem.GetProperty("errors").GetProperty("url")[0].GetString());
+    }
+
     [Fact]
     public async Task Get_returns_404_for_an_unknown_scan()
     {

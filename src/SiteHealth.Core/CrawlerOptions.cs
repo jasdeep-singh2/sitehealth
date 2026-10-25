@@ -16,4 +16,11 @@ public sealed class CrawlerOptions
 
     /// <summary>Identifies our crawler to site owners, with a link back to the project.</summary>
     public string UserAgent { get; set; } = "SiteHealthBot/0.1 (+https://github.com/jasdeep-singh2/sitehealth)";
+
+    /// <summary>
+    /// Allow scanning localhost, private networks and other internal addresses. Off by default, so a
+    /// public server is safe from SSRF without extra setup. The CLI switches it on, because on your own
+    /// machine scanning your local dev site (http://localhost:3000) is exactly what you want.
+    /// </summary>
+    public bool AllowPrivateNetworks { get; set; }
 }
