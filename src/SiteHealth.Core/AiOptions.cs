@@ -1,4 +1,4 @@
-namespace SiteHealth.Cli;
+namespace SiteHealth.Core;
 
 /// <summary>
 /// Settings for the AI advice step. Bound from the "Ai" section of appsettings.json.

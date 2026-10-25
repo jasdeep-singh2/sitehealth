@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace SiteHealth.Cli.Prompts;
+namespace SiteHealth.Core.Prompts;
 
 /// <summary>
 /// Everything we tell Claude about broken links, kept in one place (see CLAUDE.md: "keep prompts in their own files").

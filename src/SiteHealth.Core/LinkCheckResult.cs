@@ -1,4 +1,4 @@
-namespace SiteHealth.Cli;
+namespace SiteHealth.Core;
 
 /// <summary>
 /// The outcome of checking one link. <paramref name="StatusCode"/> is null when the request

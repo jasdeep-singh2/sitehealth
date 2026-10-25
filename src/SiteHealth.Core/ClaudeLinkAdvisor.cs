@@ -2,9 +2,9 @@ using System.Text.Json;
 using Anthropic;
 using Anthropic.Models.Beta.Messages;
 using Microsoft.Extensions.Options;
-using SiteHealth.Cli.Prompts;
+using SiteHealth.Core.Prompts;
 
-namespace SiteHealth.Cli;
+namespace SiteHealth.Core;
 
 /// <summary>
 /// Asks Claude to explain broken links and suggest fixes.

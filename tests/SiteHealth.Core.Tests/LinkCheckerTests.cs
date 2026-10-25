@@ -1,7 +1,7 @@
 using System.Net;
 using Microsoft.Extensions.Options;
 
-namespace SiteHealth.Cli.Tests;
+namespace SiteHealth.Core.Tests;
 
 // Step 3: these tests fail until you implement LinkChecker.CheckAsync.
 public class LinkCheckerTests

@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 
-namespace SiteHealth.Cli.Tests;
+namespace SiteHealth.Core.Tests;
 
 /// <summary>
 /// A fake HTTP handler so tests never touch the real network.

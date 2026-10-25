@@ -1,4 +1,4 @@
-namespace SiteHealth.Cli;
+namespace SiteHealth.Core;
 
 /// <summary>
 /// Explains groups of broken links and suggests fixes.

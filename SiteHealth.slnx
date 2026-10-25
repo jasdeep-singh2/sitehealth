@@ -1,8 +1,9 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/SiteHealth.Cli/SiteHealth.Cli.csproj" />
+    <Project Path="src/SiteHealth.Core/SiteHealth.Core.csproj" />
   </Folder>
   <Folder Name="/tests/">
-    <Project Path="tests/SiteHealth.Cli.Tests/SiteHealth.Cli.Tests.csproj" />
+    <Project Path="tests/SiteHealth.Core.Tests/SiteHealth.Core.Tests.csproj" />
   </Folder>
 </Solution>

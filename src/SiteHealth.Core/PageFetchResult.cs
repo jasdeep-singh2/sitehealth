@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 
-namespace SiteHealth.Cli;
+namespace SiteHealth.Core;
 
 /// <summary>
 /// The outcome of fetching one page. A failed fetch is a normal result, not an exception:
