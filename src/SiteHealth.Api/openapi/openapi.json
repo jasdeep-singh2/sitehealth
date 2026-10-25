@@ -375,7 +375,7 @@
             ]
           }
         },
-        "description": "What GET /scans/{id} returns. ScanResult? ScanResponse.Result is only set once the scan has completed."
+        "description": "What GET /scans/{id} returns. The result is only set once the scan has completed."
       },
       "ScanResult": {
         "required": [
