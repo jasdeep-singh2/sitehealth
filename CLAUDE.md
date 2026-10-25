@@ -55,3 +55,4 @@ _Fill in as the solution grows:_
 - Build: `dotnet build`
 - Test: `dotnet test`
 - Run CLI: `dotnet run --project src/SiteHealth.Cli -- <url>`
+- Run API: `dotnet run --project src/SiteHealth.Api` (http://localhost:5080, try it with `src/SiteHealth.Api/SiteHealth.Api.http`)

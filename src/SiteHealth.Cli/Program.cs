@@ -3,9 +3,7 @@ using Microsoft.Extensions.Hosting;
 using SiteHealth.Cli;
 using SiteHealth.Core;
 
-if (args.Length != 1
-    || !Uri.TryCreate(args[0], UriKind.Absolute, out var startUrl)
-    || (startUrl.Scheme != Uri.UriSchemeHttp && startUrl.Scheme != Uri.UriSchemeHttps))
+if (args.Length != 1 || !HttpUrl.TryParse(args[0], out var startUrl))
 {
     Console.WriteLine("Usage: dotnet run --project src/SiteHealth.Cli -- https://your-site.com");
     return 1;
