@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using Scalar.AspNetCore;
+using SiteHealth.Api.Hosting;
 using SiteHealth.Api.Scans;
 using SiteHealth.Core;
 
@@ -8,6 +9,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddSiteHealthCore(builder.Configuration);
 builder.Services.AddScans(builder.Configuration);
 builder.Services.AddScanRateLimits(builder.Configuration);
+builder.Services.AddProxySupport(builder.Configuration);
 
 // Errors come back as ProblemDetails (RFC 9457): one standard JSON shape for every error
 builder.Services.AddProblemDetails();
@@ -34,6 +36,8 @@ builder.Services.AddOpenApi(options => options.AddDocumentTransformer((document,
 
 var app = builder.Build();
 
+// First, so every later step (rate limiting, logging) sees the caller's real IP address
+app.UseProxySupport();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.UseRateLimiter();
